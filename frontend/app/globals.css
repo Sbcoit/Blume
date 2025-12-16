@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Apple-inspired dark mode with a cleaner blue accent */
+  --bg-root: 9 10 14;        /* near-black graphite */
+  --bg-elevated: 20 22 29;   /* subtle elevation */
+  --accent: 64 156 255;      /* cleaner, softer macOS blue */
+  --accent-soft: 34 116 210; /* for glows and soft fills */
+  --border-subtle: 54 60 75;
+  --text-main: 242 244 247;
+  --text-muted: 136 144 160;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply antialiased;
+  background-color: rgb(var(--bg-root));
+  color: rgb(var(--text-main));
+}
+
+.app-background {
+  background:
+    radial-gradient(circle at top left, rgba(64, 156, 255, 0.24), transparent 55%),
+    linear-gradient(180deg, #050509 0%, #050509 40%, #050509 100%);
+}
+
+.app-grid-overlay {
+  /* Subtle vignette to give depth behind glass panels */
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.08), transparent 65%);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.page-enter {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: fade-up 0.6s ease-out forwards;
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
