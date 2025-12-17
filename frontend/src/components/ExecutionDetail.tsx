@@ -45,7 +45,7 @@ export default function ExecutionDetail({
         </ol>
       </div>
 
-      <aside className="space-y-4 rounded-xl border border-border/70 bg-surface/70 p-4 text-xs text-text-muted">
+      <aside className="space-y-4 rounded-2xl border border-border/40 bg-background/25 p-4 text-xs text-text-muted backdrop-blur-xl shadow-elevated">
         <h3 className="text-sm font-semibold text-text-main">Run context</h3>
         <div className="space-y-1.5">
           <div>

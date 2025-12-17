@@ -46,7 +46,7 @@ export default function ActivityList({
       {executions.map((exec, idx) => (
         <Card
           key={exec.id}
-          className="flex cursor-pointer items-center justify-between gap-4 border-border/60 bg-surface/80 transition hover:bg-surface"
+          className="flex cursor-pointer items-center justify-between gap-4 border-border/40 bg-background/25 transition hover:bg-background/35 backdrop-blur-xl"
           style={{ animationDelay: `${idx * 40}ms` }}
           onClick={() => onSelectExecution?.(exec.id)}
         >

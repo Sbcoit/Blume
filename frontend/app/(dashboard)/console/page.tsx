@@ -9,6 +9,7 @@
 import { FormEvent, useState } from "react";
 import Button from "@/components/UI/Button";
 import { useRouter } from "next/navigation";
+import { registerPhoneNumber } from "@/services/agentService";
 
 type TabId = "phone" | "tools";
 
@@ -21,6 +22,7 @@ interface ToolConfig {
   name: string;
   description: string;
   accentClass: string;
+  fieldsComponent?: React.ComponentType;
 }
 
 // Simple console with two tabs: Phone and Tools, inside a single card.
@@ -30,7 +32,7 @@ export default function ConsolePage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex items-end justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
             Blume Console
@@ -39,14 +41,24 @@ export default function ConsolePage() {
             Set the phone number your agent talks to and wire up its tools.
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push("/")}
-          className="text-xs"
-        >
-          Log out
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/executions")}
+            className="text-xs"
+          >
+            Executions
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/")}
+            className="text-xs"
+          >
+            Log out
+          </Button>
+        </div>
       </header>
 
       <ConsoleCard>
@@ -89,7 +101,7 @@ function PhoneSection() {
    const [error, setError] = useState<string | null>(null);
   const [countryMenuOpen, setCountryMenuOpen] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     if (!phone) {
@@ -107,14 +119,20 @@ function PhoneSection() {
 
     setStatus("sending");
 
-    // Replace this with a real backend call to register the number.
-    setTimeout(() => {
-      console.log("[agent] register phone number", {
+    try {
+      await registerPhoneNumber({
         agentName: agentName || "Unnamed agent",
-        phone: normalized
+        phone: normalized,
       });
       setStatus("sent");
-    }, 500);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to send confirmation message. Please try again."
+      );
+      setStatus("idle");
+    }
   }
 
   return (
@@ -225,18 +243,28 @@ function PhoneSection() {
 }
 
 function ToolsSection() {
+  // Tool registry: map tool IDs to their field components
+  const toolFieldsRegistry: Record<string, React.ComponentType> = {
+    "google-calendar": GoogleCalendarFields
+    
+    // Add more tools here as you create them:
+    // "slack": SlackFields,
+    // "email": EmailFields,
+  };
+
   const tools: ToolConfig[] = [
     {
       id: "google-calendar",
       name: "Google Calendar",
       description: "Let the agent read/create events on specific calendars.",
-      accentClass: "from-blue-500/20 to-blue-500/5"
+      accentClass: "from-blue-500/20 to-blue-500/5",
+      fieldsComponent: GoogleCalendarFields
     },
     {
       id: "placeholder",
       name: "Add another tool",
       description:
-        "When you’re ready, mirror this for Slack, email, internal APIs, and more.",
+        "When you're ready, mirror this for Slack, email, internal APIs, and more.",
       accentClass: "from-emerald-500/20 to-emerald-500/5"
     }
   ];
@@ -251,22 +279,25 @@ function ToolsSection() {
         </p>
       </header>
 
-      <div className="space-y-3">
-        {tools.map((tool) =>
-          tool.id === "google-calendar" ? (
-            <ToolCard key={tool.id} tool={tool}>
-              <GoogleCalendarFields />
-            </ToolCard>
-          ) : (
-            <ToolCard key={tool.id} tool={tool}>
-              <p className="text-xs text-text-muted">
-                This is just a placeholder. To add a real tool, duplicate the
-                Google Calendar block in code and swap out the fields +
-                descriptions for your integration.
-              </p>
-            </ToolCard>
-          )
-        )}
+      <div className="max-h-[calc(100vh-350px)] min-h-0 overflow-y-auto rounded-xl bg-background/25 backdrop-blur-xl pr-2">
+        <div className="space-y-3 p-3">
+          {tools.map((tool) => {
+            const FieldsComponent = tool.fieldsComponent || toolFieldsRegistry[tool.id];
+            
+            return (
+              <ToolCard key={tool.id} tool={tool}>
+                {FieldsComponent ? (
+                  <FieldsComponent />
+                ) : (
+                  <p className="text-xs text-text-muted">
+                    This is just a placeholder. To add a real tool, create a fields component
+                    and add it to the tools array with a fieldsComponent property.
+                  </p>
+                )}
+              </ToolCard>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
@@ -342,6 +373,8 @@ function ToolCard({
 }
 
 function GoogleCalendarFields() {
+  const router = useRouter();
+  
   return (
     <div className="mt-2 space-y-2">
       <div className="space-y-1">
@@ -364,24 +397,35 @@ function GoogleCalendarFields() {
           placeholder="primary, team@company.com, ..."
         />
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="mt-1"
-        onClick={() =>
-          console.log("[agent] save google calendar tool config (stub)")
-        }
-      >
-        Save calendar settings
-      </Button>
+      <div className="flex items-center justify-between gap-2 pt-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            console.log("[agent] save google calendar tool config (stub)")
+          }
+          className="text-[11px]"
+        >
+          Save settings
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/calendar")}
+          className="text-[11px] text-text-muted hover:text-text-main"
+        >
+          Manage calendars →
+        </Button>
+      </div>
     </div>
   );
 }
 
 function ConsoleCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border/40 bg-background/30 p-5 shadow-elevated backdrop-blur-2xl">
+    <div className="rounded-2xl border border-border/40 bg-transparent p-5 shadow-elevated backdrop-blur-2xl">
       {children}
     </div>
   );
