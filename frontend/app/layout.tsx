@@ -1,23 +1,36 @@
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ReactNode } from "react";
+// import { Providers } from "./providers";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-  title: "Blume",
-  description: "Blume"
+  title: "Blume - Your Personal Secretary Agent",
+  description: "AI-powered personal secretary accessible via iMessage, calls, and web",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
-      <body className="min-h-screen font-sans text-text-main app-background relative">
-        <div className="app-grid-overlay fixed inset-0 z-0" />
-        <div className="relative z-10 flex min-h-screen flex-col">
-          {children}
-        </div>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {/* <Providers>{children}</Providers> */}
+        {children}
       </body>
     </html>
   );
 }
-
-

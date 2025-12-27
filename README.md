@@ -1,227 +1,140 @@
-# **Blume**
+# Blume Platform
 
-## Agentic iMessage Workflow Platform
+A personal secretary agent platform accessible via iMessage (with blue bubbles), calls, and web interface. Users interact with an AI agent for scheduling, workflows, research, calls/texts, and document synthesis.
 
----
+## Architecture
 
-## **Overview**
+- **Frontend**: Next.js 14+ (App Router) with TypeScript
+- **Backend**: FastAPI (Python) with async support
+- **AI/LLM**: Groq API
+- **iMessage Integration**: BlueBubbles Server (runs on Mac Mini)
+- **Calls**: Twilio (for voice calls)
+- **Database**: PostgreSQL with SQLAlchemy ORM
 
-Blume is a **self-hosted, agentic assistant platform** that communicates through **iMessage (blue bubbles)** and executes explicit, user-requested workflows such as scheduling events in Google Calendar.
+## Setup Instructions
 
-Blume is designed to act as a **separate entity**, not impersonating the user and never acting autonomously. It only performs actions when directly instructed via iMessage or through the web dashboard.
+### Prerequisites
 
-The platform is built as a **B2B-style SaaS system**, consisting of:
+- Node.js 18+ and npm
+- Python 3.10+
+- PostgreSQL database
+- Mac Mini with macOS 10.12+ (for BlueBubbles server)
 
-* A **macOS-hosted BlueBubbles server** for iMessage connectivity
-* A **cloud backend** that interprets messages and executes workflows
-* A **web dashboard** for visibility, monitoring, and future configuration
-* A **workflow-first architecture** designed to scale to complex agent behaviors
+### Backend Setup
 
----
+1. Navigate to backend directory:
+   ```bash
+   cd backend
+   ```
 
-## **Core Principles**
+2. Create virtual environment:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-* **Explicit control** – the agent only acts when told
-* **Agentic separation** – the agent is not “you”
-* **Workflow-first** – every action is a workflow
-* **Modular and extensible** – new workflows plug in cleanly
-* **Blue-bubble native** – iMessage only (no SMS, no Twilio)
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
----
+4. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-## **Key Features (MVP)**
+5. Set up database:
+   ```bash
+   # Create database
+   createdb blume
 
-### **iMessage Agent Interface**
+   # Run migrations
+   alembic upgrade head
+   ```
 
-* Users interact with Blume via **iMessage**
-* Messages are sent and received as **blue bubbles**
-* Powered by a self-hosted **BlueBubbles server** running on macOS
+6. Run the server:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
-### **Workflow Execution**
+### Frontend Setup
 
-* Incoming messages are interpreted as **explicit workflow triggers**
-* Initial supported workflow:
+1. Navigate to frontend directory:
+   ```bash
+   cd frontend
+   ```
 
-  * **Schedule events in Google Calendar**
-* Architecture supports:
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-  * Multi-step workflows
-  * Confirmations and approvals
-  * Auditing and traceability
+3. Set up environment variables:
+   ```bash
+   cp .env.local.example .env.local
+   # Edit .env.local with your configuration
+   ```
 
-### **Agent Engine**
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-* Uses **Groq LLM** for:
+### BlueBubbles Server Setup (Mac Mini)
 
-  * Intent classification
-  * Argument extraction
-* Executes workflows via a deterministic step executor
-* No autonomous or background execution
+1. Download BlueBubbles server from [GitHub Releases](https://github.com/BlueBubblesApp/bluebubbles-server/releases)
 
-### **Web Dashboard**
+2. Install the .dmg file on your Mac Mini
 
-* View workflow executions in real time
-* Inspect step-by-step execution details
-* Monitor agent activity, failures, and logs
-* Automatically supports new workflows without frontend rewrites
+3. Grant required permissions:
+   - **Full Disk Access**: Required to read iMessage database
+   - **Accessibility**: For certain features (optional)
 
----
+4. Configure the server:
+   - Set a strong server password
+   - Configure proxy service (Cloudflare recommended)
+   - Set up Firebase for notifications
 
-## **High-Level Architecture**
+5. Ensure iMessage is activated with your phone number/email on Apple ID
 
-```
-User (iMessage)
-   ↓
-BlueBubbles Server (macOS)
-   ↓ Webhook
-Backend API (FastAPI)
-   ├─ Intent Classification (Groq)
-   ├─ Argument Binding
-   ├─ Workflow Planner
-   ├─ Step Executor
-   └─ Primitives
-       ├─ Tool Invocation
-       ├─ State Persistence
-       └─ Audit Logging
-   ↓
-Supabase (PostgreSQL + Realtime)
-   ↓
-Web Dashboard (Next.js)
-```
+6. Configure webhook:
+   - Navigate to BlueBubbles server settings → "API & Webhooks"
+   - Add webhook URL: `https://your-backend.com/api/v1/webhooks/bluebubbles`
+   - Subscribe to events: "New Message", "Message Update", etc.
 
----
-
-## **Technology Stack**
-
-### Messaging
-
-* **BlueBubbles Server**
-* Apple ID (optionally with a verified phone number)
-
-### Backend
-
-* **Python**
-* **FastAPI**
-* **Groq LLM**
-* **Supabase (PostgreSQL)**
-
-### Frontend
-
-* **Next.js**
-* **React**
-* **TailwindCSS**
-* Supabase Realtime subscriptions
-
-### Deployment
-
-* Docker (backend & frontend)
-* macOS machine (physical or hosted) for BlueBubbles
-
----
-
-## **Project Structure**
+## Project Structure
 
 ```
-blume/
-├── backend/        # Agent engine, workflows, APIs
-├── frontend/       # Dashboard UI
-├── bluebubbles/    # BlueBubbles configuration and docs
-├── docker/         # Dockerfiles
-├── scripts/        # Deployment & migration scripts
-├── docs/           # Architecture & diagrams
+assistantagent/
+├── frontend/          # Next.js application
+├── backend/           # FastAPI application
 └── README.md
 ```
 
----
+## Features
 
-## **Agent Design Philosophy**
+- ✅ Authentication (signup/login)
+- ✅ Dark-mode Apple-glass aesthetic UI
+- ✅ Home tab with phone number setup
+- ✅ Tasks tab with Luma Events-style presentation
+- ✅ Settings tab with integrations
+- ✅ iMessage integration via BlueBubbles (blue bubbles!)
+- ✅ Modular, scalable architecture
+- ✅ Agent system with Groq LLM
+- ✅ Task management
+- ✅ Document processing
 
-### What Blume Does
+## Development
 
-* Interprets explicit instructions
-* Executes defined workflows
-* Persists state and logs
-* Reports outcomes clearly
+The architecture is modular and follows SOLID principles:
 
-### What Blume Does Not Do
+- **Plugin/Interface Pattern**: All integrations implement base interfaces
+- **Event-Driven Architecture**: Decoupled communication via event bus
+- **Dependency Injection**: Services injected via FastAPI dependencies
+- **Handler Pattern**: Modular agent handlers for different task types
 
-* Auto-respond to messages
-* Act without explicit commands
-* Pretend to be the user
-* Run silent background tasks
+## License
 
----
-
-## **Workflows**
-
-Workflows are the core abstraction in Blume.
-
-Each workflow:
-
-* Is triggered explicitly by a message
-* Has a defined schema
-* Executes through atomic primitives
-* Persists state and audit logs
-
-### **Example Workflow: Schedule Event**
-
-```
-User: “Schedule a meeting tomorrow at 3pm”
-→ Intent: schedule_event
-→ Arguments: { date, time, title }
-→ Steps:
-   1. Persist workflow state
-   2. Call Google Calendar API
-   3. Confirm completion
-```
-
-Adding a new workflow requires:
-
-* Creating a new file in `engine/workflows/`
-* No modification to the core engine
-
----
-
-## **Why BlueBubbles (No Twilio)**
-
-* iMessage provides a **native, trusted UX**
-* Blue bubbles only
-* No SMS fallback complexity
-* The agent feels natural and first-class
-
----
-
-## **Future Expansion**
-
-* Multi-step and conditional workflows
-* Task and reminder management
-* Email, Slack, and third-party integrations
-* Multi-tenant organizations
-* Role-based permissions
-* Multiple Apple IDs per deployment
-* Advanced audit, replay, and observability tools
-
----
-
-## **Development Status**
-
-* Architecture defined
-* Frontend scaffolded
-* Backend engine designed
-* MVP workflow: calendar scheduling
-
----
-
-## **License**
-
-MIT (or TBD)
-
----
-
-## **Summary**
-
-Blume is a **workflow-first, agentic assistant platform** built on iMessage.
-It emphasizes **control, transparency, and extensibility**, serving as both a practical assistant and a foundation for advanced agent-driven SaaS products.
-
----
+MIT
 

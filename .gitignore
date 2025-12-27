@@ -1,59 +1,54 @@
-# Node / JS
-node_modules
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# Next.js
-.next
-out
-.next-static
-.vercel
+# Dependencies
+node_modules/
+venv/
+env/
+.venv/
 
 # Environment variables
 .env
 .env.local
-.env.*.local
-
-# Logs
-logs
-*.log
-*.log.*
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-debug.log
-
-# OS / Editor
-.DS_Store
-Thumbs.db
-.idea
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
+.env*.local
 
 # Build outputs
-dist
-build
-coverage
+.next/
+dist/
+build/
+*.egg-info/
 
-# Python backend (if any)
+# Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-*.pdb
-*.egg-info/
-.eggs/
-.env_backend
-.venv
-venv
+*$py.class
+*.so
+.Python
 
-# Misc
+# Database
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Misc
+*.bak
 *.tmp
+
+.env.backend
+.env.frontend
