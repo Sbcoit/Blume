@@ -37,61 +37,79 @@ class CommunicationHandler(BaseHandler):
     async def handle(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle a communication task"""
         from app.services.agent.llm.groq_client import GroqClient
+        from app.services.conversation_service import ConversationService
+        from app.core.database import SessionLocal
+        from uuid import UUID
         
         llm = GroqClient()
         input_text = task_data.get("input", "")
         
+        # Get conversation history
+        db = SessionLocal()
+        try:
+            user_id = UUID(task_data.get("user_id"))
+            chat_guid = task_data.get("metadata", {}).get("chat_guid")
+            agent_name = task_data.get("metadata", {}).get("agent_name", "Blume")
+            
+            # Retrieve recent conversation history (last 10 message pairs)
+            history = ConversationService.get_recent_history(
+                db=db,
+                user_id=user_id,
+                limit=10,
+                chat_guid=chat_guid
+            )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error retrieving conversation history: {e}", exc_info=True)
+            history = []
+            agent_name = "Blume"
+        finally:
+            db.close()
+        
         # Define functions for LLM to call
         functions = [
             FunctionDefinition(
-                name="send_message",
-                description="Send a text message to a phone number via iMessage",
+                name="execute_communication_action",
+                description="Perform communication operations: send (send text message via iMessage), call (make voice call)",
                 parameters={
                     "type": "object",
                     "properties": {
-                        "recipient": {
+                        "action": {
                             "type": "string",
-                            "description": "Phone number or contact identifier to send message to"
+                            "enum": ["send", "call"],
+                            "description": "Action to perform: 'send' (send text message), 'call' (make voice call)"
                         },
-                        "content": {
-                            "type": "string",
-                            "description": "Message content to send"
+                        "parameters": {
+                            "type": "object",
+                            "description": "Action-specific parameters. For 'send': {recipient (required string), content (required string)}. For 'call': {recipient (required string), purpose (optional string)}."
                         }
                     },
-                    "required": ["recipient", "content"]
-                }
-            ),
-            FunctionDefinition(
-                name="make_call",
-                description="Make a voice call to a phone number",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "recipient": {
-                            "type": "string",
-                            "description": "Phone number to call"
-                        },
-                        "purpose": {
-                            "type": "string",
-                            "description": "Optional purpose or context for the call"
-                        }
-                    },
-                    "required": ["recipient"]
+                    "required": ["action", "parameters"]
                 }
             )
         ]
         
-        # Create messages with system prompt
+        # Build messages with system prompt, history, and current message
         messages = [
             LLMMessage(
                 role="system",
-                content="You are Blume, a helpful personal assistant. When the user wants to send a message or make a call, use the appropriate function. Determine the recipient and content from the user's request."
-            ),
-            LLMMessage(
-                role="user",
-                content=input_text
+                content=f"You are {agent_name}, a helpful personal assistant. When the user wants to send a message or make a call, use the appropriate function. Determine the recipient and content from the user's request. You have access to conversation history to maintain context."
             )
         ]
+        
+        # Add conversation history (excluding the current message which we'll add next)
+        for msg in history:
+            messages.append(LLMMessage(
+                role=msg["role"],
+                content=msg["content"]
+            ))
+        
+        # Add current user message
+        messages.append(LLMMessage(
+                role="user",
+                content=input_text
+        ))
         
         try:
             # Call LLM with function definitions
@@ -103,10 +121,8 @@ class CommunicationHandler(BaseHandler):
                 arguments = json.loads(result["arguments"]) if isinstance(result["arguments"], str) else result["arguments"]
                 
                 # Execute the function call
-                if function_name == "send_message":
-                    return await self._handle_send_message(arguments)
-                elif function_name == "make_call":
-                    return await self._handle_make_call(arguments)
+                if function_name == "execute_communication_action":
+                    return await self._handle_communication_action(arguments)
                 else:
                     return {
                         "status": "failed",
@@ -127,11 +143,27 @@ class CommunicationHandler(BaseHandler):
                 "metadata": {"error": str(e), "handler": "communication_handler"}
             }
     
-    async def _handle_send_message(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle send_message function call"""
+    async def _handle_communication_action(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle execute_communication_action function call"""
+        action = arguments.get("action")
+        params = arguments.get("parameters", {})
+        
+        if action == "send":
+            return await self._handle_send_message(params)
+        elif action == "call":
+            return await self._handle_make_call(params)
+        else:
+            return {
+                "status": "failed",
+                "output": f"Unknown communication action: {action}. Valid actions are: send, call",
+                "metadata": {"handler": "communication_handler"}
+            }
+    
+    async def _handle_send_message(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle send message action"""
         try:
-            recipient = arguments.get("recipient")
-            content = arguments.get("content")
+            recipient = params.get("recipient")
+            content = params.get("content")
             
             if not recipient or not content:
                 return {
@@ -153,7 +185,7 @@ class CommunicationHandler(BaseHandler):
                     "output": f"Message sent to {recipient}: {content}",
                     "metadata": {
                         "handler": "communication_handler",
-                        "action": "send_message",
+                        "action": "send",
                         "recipient": recipient
                     }
                 }
@@ -170,11 +202,11 @@ class CommunicationHandler(BaseHandler):
                 "metadata": {"error": str(e), "handler": "communication_handler"}
             }
     
-    async def _handle_make_call(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle make_call function call"""
+    async def _handle_make_call(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle make call action"""
         try:
-            recipient = arguments.get("recipient")
-            purpose = arguments.get("purpose")
+            recipient = params.get("recipient")
+            purpose = params.get("purpose")
             
             if not recipient:
                 return {
@@ -190,7 +222,7 @@ class CommunicationHandler(BaseHandler):
                 "output": f"Call initiated to {recipient}" + (f" for: {purpose}" if purpose else ""),
                 "metadata": {
                     "handler": "communication_handler",
-                    "action": "make_call",
+                    "action": "call",
                     "recipient": recipient,
                     "call_id": call.call_id,
                     "status": call.status

@@ -8,6 +8,7 @@ from app.services.agent.handlers.research_handler import ResearchHandler
 from app.services.agent.handlers.document_handler import DocumentHandler
 from app.services.agent.handlers.workflow_handler import WorkflowHandler
 from app.services.agent.handlers.communication_handler import CommunicationHandler
+from app.services.agent.handlers.email_handler import EmailHandler
 from app.services.agent.llm.base import BaseLLM
 from app.services.agent.llm.groq_client import GroqClient
 from app.core.events import event_bus, EventType
@@ -35,8 +36,9 @@ class AgentService:
         )
         
         self._handlers: List[BaseHandler] = [
-            communication_handler,  # Add communication handler first for priority
-            SchedulingHandler(),
+            SchedulingHandler(),  # Scheduling handler FIRST - most specific for calendar/meeting tasks
+            communication_handler,  # Communication handler after scheduling
+            EmailHandler(),  # Email handler for Gmail
             ResearchHandler(),
             DocumentHandler(),
             WorkflowHandler(),
@@ -75,17 +77,52 @@ class AgentService:
     async def _process_with_llm(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process task with LLM when no specific handler"""
         from app.services.agent.llm.base import LLMMessage
+        from app.services.conversation_service import ConversationService
+        from app.core.database import SessionLocal
+        from uuid import UUID
         
+        # Get conversation history
+        db = SessionLocal()
+        try:
+            user_id = UUID(task_data.get("user_id"))
+            chat_guid = task_data.get("metadata", {}).get("chat_guid")
+            agent_name = task_data.get("metadata", {}).get("agent_name", "Blume")
+            
+            # Retrieve recent conversation history (last 10 message pairs)
+            history = ConversationService.get_recent_history(
+                db=db,
+                user_id=user_id,
+                limit=10,
+                chat_guid=chat_guid
+            )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error retrieving conversation history: {e}", exc_info=True)
+            history = []
+        finally:
+            db.close()
+        
+        # Build messages with system prompt, history, and current message
         messages = [
             LLMMessage(
                 role="system",
-                content="You are Blume, a helpful personal assistant. Respond helpfully and concisely."
-            ),
-            LLMMessage(
-                role="user",
-                content=task_data.get("input", "")
+                content=f"You are {agent_name}, a helpful personal assistant. Respond helpfully and concisely. You have access to conversation history to maintain context."
             )
         ]
+        
+        # Add conversation history (excluding the current message which we'll add next)
+        for msg in history:
+            messages.append(LLMMessage(
+                role=msg["role"],
+                content=msg["content"]
+            ))
+        
+        # Add current user message
+        messages.append(LLMMessage(
+                role="user",
+                content=task_data.get("input", "")
+        ))
         
         try:
             response = await self.llm.chat(messages)

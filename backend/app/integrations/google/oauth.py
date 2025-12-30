@@ -14,11 +14,14 @@ import os
 class GoogleOAuth:
     """Google OAuth handler for unified Google account connection"""
     
-    # Scopes for Google Account integration (Calendar, Docs, Drive, etc.)
+    # Scopes for Google Account integration (Calendar, Docs, Drive, Gmail, etc.)
     SCOPES = [
         'https://www.googleapis.com/auth/calendar',  # Google Calendar
         'https://www.googleapis.com/auth/documents',  # Google Docs
         'https://www.googleapis.com/auth/drive.readonly',  # Google Drive (read-only for accessing files)
+        'https://www.googleapis.com/auth/gmail.send',  # Gmail - Send emails
+        'https://www.googleapis.com/auth/gmail.compose',  # Gmail - Compose/draft emails
+        'https://www.googleapis.com/auth/gmail.readonly',  # Gmail - Read emails
     ]
     
     REDIRECT_URI = "http://localhost:8000/api/v1/integrations/google/callback"
@@ -109,4 +112,40 @@ class GoogleOAuth:
                 cred_dict["refresh_token"] = credentials.refresh_token
         
         return cred_dict
+    
+    @staticmethod
+    def revoke_credentials(cred_dict: Dict) -> bool:
+        """Revoke OAuth credentials and revoke all permissions
+        
+        Args:
+            cred_dict: Dictionary containing OAuth credentials
+            
+        Returns:
+            True if revocation was successful, False otherwise
+        """
+        try:
+            credentials = GoogleOAuth.get_credentials_from_dict(cred_dict)
+            
+            if credentials and credentials.token:
+                # Revoke the token using Google's revocation endpoint
+                import httpx
+                revoke_url = "https://oauth2.googleapis.com/revoke"
+                
+                # Use httpx synchronously for token revocation
+                with httpx.Client() as client:
+                    response = client.post(
+                        revoke_url,
+                        params={"token": credentials.token},
+                        headers={"Content-Type": "application/x-www-form-urlencoded"}
+                    )
+                    
+                    # Google returns 200 even if token is already revoked
+                    return response.status_code == 200
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error revoking Google OAuth credentials: {e}", exc_info=True)
+            return False
+        
+        return False
 

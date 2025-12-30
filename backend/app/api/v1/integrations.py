@@ -2,11 +2,13 @@
 Integration endpoints
 """
 from fastapi import APIRouter, Depends
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.dependencies import get_database
 from app.api.v1.auth import get_current_user_id
 from app.integrations.registry import integration_registry
+from app.core.config import settings
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -94,8 +96,9 @@ async def authorize_integration(
 
 @router.get("/google/callback")
 async def google_oauth_callback(
-    code: str,
-    state: str,
+    code: str = None,
+    state: str = None,
+    error: str = None,
     db: Session = Depends(get_database)
 ):
     """Handle Google OAuth callback - connects both Calendar and Docs"""
@@ -105,65 +108,101 @@ async def google_oauth_callback(
     import base64
     import json
     
+    # Get frontend URL for redirect
+    frontend_url = settings.CORS_ORIGINS[0] if settings.CORS_ORIGINS else "http://localhost:3000"
+    
+    # Handle OAuth errors
+    if error or not code or not state:
+        error_msg = error or "OAuth authorization failed"
+        redirect_url = f"{frontend_url}/settings?google_error={error_msg}"
+        return RedirectResponse(url=redirect_url)
+    
     # Extract user_id from state
     try:
         state_data = json.loads(base64.urlsafe_b64decode(state.encode()).decode())
         user_id = state_data.get("user_id")
         if not user_id:
-            return {"error": "Invalid state token"}
+            redirect_url = f"{frontend_url}/settings?google_error=Invalid state token"
+            return RedirectResponse(url=redirect_url)
     except Exception as e:
-        return {"error": f"Invalid state token: {str(e)}"}
+        redirect_url = f"{frontend_url}/settings?google_error=Invalid state token"
+        return RedirectResponse(url=redirect_url)
     
-    # Exchange code for credentials
-    credentials = GoogleOAuth.exchange_code_for_credentials(code)
+    try:
+        # Exchange code for credentials
+        credentials = GoogleOAuth.exchange_code_for_credentials(code)
+        
+        # Store credentials for Google Calendar, Google Docs, and Gmail
+        # They share the same credentials since it's one Google account
+        
+        # Create/update Google Calendar integration
+        calendar_integration = db.query(Integration).filter(
+            Integration.user_id == UUID(user_id),
+            Integration.provider == IntegrationProvider.GOOGLE_CALENDAR.value
+        ).first()
+        
+        if not calendar_integration:
+            calendar_integration = Integration(
+                id=uuid4(),
+                user_id=UUID(user_id),
+                provider=IntegrationProvider.GOOGLE_CALENDAR.value,
+                credentials=credentials,
+                status="connected"
+            )
+            db.add(calendar_integration)
+        else:
+            calendar_integration.credentials = credentials
+            calendar_integration.status = "connected"
+        
+        # Create/update Google Docs integration
+        docs_integration = db.query(Integration).filter(
+            Integration.user_id == UUID(user_id),
+            Integration.provider == IntegrationProvider.GOOGLE_DOCS.value
+        ).first()
+        
+        if not docs_integration:
+            docs_integration = Integration(
+                id=uuid4(),
+                user_id=UUID(user_id),
+                provider=IntegrationProvider.GOOGLE_DOCS.value,
+                credentials=credentials,  # Same credentials
+                status="connected"
+            )
+            db.add(docs_integration)
+        else:
+            docs_integration.credentials = credentials
+            docs_integration.status = "connected"
+        
+        # Create/update Gmail integration
+        gmail_integration = db.query(Integration).filter(
+            Integration.user_id == UUID(user_id),
+            Integration.provider == IntegrationProvider.GOOGLE_GMAIL.value
+        ).first()
+        
+        if not gmail_integration:
+            gmail_integration = Integration(
+                id=uuid4(),
+                user_id=UUID(user_id),
+                provider=IntegrationProvider.GOOGLE_GMAIL.value,
+                credentials=credentials,  # Same credentials
+                status="connected"
+            )
+            db.add(gmail_integration)
+        else:
+            gmail_integration.credentials = credentials
+            gmail_integration.status = "connected"
+        
+        db.commit()
+        
+        # Redirect back to frontend settings page with success
+        redirect_url = f"{frontend_url}/settings?google_connected=true"
+        return RedirectResponse(url=redirect_url)
     
-    # Store credentials for both Google Calendar and Google Docs
-    # They share the same credentials since it's one Google account
-    
-    # Create/update Google Calendar integration
-    calendar_integration = db.query(Integration).filter(
-        Integration.user_id == UUID(user_id),
-        Integration.provider == IntegrationProvider.GOOGLE_CALENDAR.value
-    ).first()
-    
-    if not calendar_integration:
-        calendar_integration = Integration(
-            id=uuid4(),
-            user_id=UUID(user_id),
-            provider=IntegrationProvider.GOOGLE_CALENDAR.value,
-            credentials=credentials,
-            status="connected"
-        )
-        db.add(calendar_integration)
-    else:
-        calendar_integration.credentials = credentials
-        calendar_integration.status = "connected"
-    
-    # Create/update Google Docs integration
-    docs_integration = db.query(Integration).filter(
-        Integration.user_id == UUID(user_id),
-        Integration.provider == IntegrationProvider.GOOGLE_DOCS.value
-    ).first()
-    
-    if not docs_integration:
-        docs_integration = Integration(
-            id=uuid4(),
-            user_id=UUID(user_id),
-            provider=IntegrationProvider.GOOGLE_DOCS.value,
-            credentials=credentials,  # Same credentials
-            status="connected"
-        )
-        db.add(docs_integration)
-    else:
-        docs_integration.credentials = credentials
-        docs_integration.status = "connected"
-    
-    db.commit()
-    
-    return {
-        "status": "connected",
-        "providers": ["google_calendar", "google_docs"]
-    }
+    except Exception as e:
+        # Handle any errors during credential exchange or storage
+        db.rollback()
+        redirect_url = f"{frontend_url}/settings?google_error={str(e)}"
+        return RedirectResponse(url=redirect_url)
 
 
 @router.delete("/{integration_id}")
@@ -177,17 +216,34 @@ async def disconnect_integration(
     from app.core.exceptions import NotFoundError
     from uuid import UUID
     
-    # Handle Google account disconnection (disconnect both Calendar and Docs)
+    # Handle Google account disconnection (disconnect Calendar, Docs, and Gmail)
     if integration_id == "google":
-        # Delete both Google Calendar and Google Docs integrations
+        # Get all Google integrations (Calendar, Docs, Gmail)
         google_integrations = db.query(Integration).filter(
             Integration.user_id == UUID(user_id),
-            Integration.provider.in_([IntegrationProvider.GOOGLE_CALENDAR.value, IntegrationProvider.GOOGLE_DOCS.value])
+            Integration.provider.in_([
+                IntegrationProvider.GOOGLE_CALENDAR.value,
+                IntegrationProvider.GOOGLE_DOCS.value,
+                IntegrationProvider.GOOGLE_GMAIL.value
+            ])
         ).all()
         
         if not google_integrations:
             raise NotFoundError("Google Account integration not found")
         
+        # Revoke OAuth permissions before deleting
+        # Use credentials from the first integration (they're shared)
+        if google_integrations and google_integrations[0].credentials:
+            from app.integrations.google.oauth import GoogleOAuth
+            try:
+                GoogleOAuth.revoke_credentials(google_integrations[0].credentials)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to revoke Google OAuth credentials: {e}", exc_info=True)
+                # Continue with deletion even if revocation fails
+        
+        # Delete both integrations from database
         for integration in google_integrations:
             db.delete(integration)
         db.commit()

@@ -16,4 +16,5 @@ class User(Base, TimestampMixin):
     password_hash = Column(String, nullable=False)
     phone_number = Column(String, nullable=True)
     agent_name = Column(String, nullable=True)
+    timezone = Column(String, nullable=True, default='America/Los_Angeles')  # IANA timezone string
 

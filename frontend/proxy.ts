@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes that don't require authentication
@@ -10,9 +10,10 @@ export function middleware(request: NextRequest) {
 
   // Since we're using localStorage (client-side) for tokens,
   // we'll rely on client-side auth checks in the components
-  // This middleware just allows all requests through
+  // This proxy just allows all requests through
   // The dashboard layout and pages will handle auth redirects
   
+
   return NextResponse.next();
 }
 

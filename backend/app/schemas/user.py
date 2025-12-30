@@ -11,6 +11,7 @@ class UserBase(BaseModel):
     email: EmailStr
     phone_number: Optional[str] = None
     agent_name: Optional[str] = None
+    timezone: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -20,6 +21,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     phone_number: Optional[str] = None
     agent_name: Optional[str] = None
+    timezone: Optional[str] = None
 
 
 class UserResponse(UserBase):

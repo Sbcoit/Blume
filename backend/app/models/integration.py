@@ -15,6 +15,7 @@ class IntegrationProvider(str, enum.Enum):
     """Integration providers"""
     GOOGLE_CALENDAR = "google_calendar"
     GOOGLE_DOCS = "google_docs"
+    GOOGLE_GMAIL = "google_gmail"
     NOTION = "notion"
     BLUEBUBBLES = "bluebubbles"
     VAPI = "vapi"

@@ -17,6 +17,7 @@ class CalendarEvent:
         description: Optional[str] = None,
         location: Optional[str] = None,
         attendees: Optional[List[str]] = None,
+        timezone: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None
     ):
         self.title = title
@@ -25,6 +26,7 @@ class CalendarEvent:
         self.description = description
         self.location = location
         self.attendees = attendees or []
+        self.timezone = timezone
         self.metadata = metadata or {}
 
 

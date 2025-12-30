@@ -66,12 +66,13 @@ export default function DashboardLayout({
 
   return (
     <div style={{ 
-      minHeight: "100vh", 
+      height: "100vh", 
       display: "flex", 
       flexDirection: "column",
       backgroundColor: "transparent",
       width: "100%",
-      position: "relative"
+      position: "relative",
+      overflow: "hidden"
     }}>
       {/* Tab Navigation */}
       <nav 
@@ -188,15 +189,17 @@ export default function DashboardLayout({
 
       {/* Main Content */}
       <main style={{
-        flex: "1 1 auto",
-        maxWidth: "1280px",
+        flex: "1 1 0",
+        maxWidth: "100%",
         margin: "0 auto",
         padding: "2.5rem var(--space-lg)",
         width: "100%",
-        overflow: "visible"
+        overflowY: "auto",
+        overflowX: "hidden",
+        minHeight: 0
       }}>
         <div style={{
-          maxWidth: "896px",
+          maxWidth: "100%",
           margin: "0 auto",
           width: "100%",
           minHeight: "0"

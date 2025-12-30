@@ -1,6 +1,7 @@
 """
 FastAPI application entry point
 """
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,6 +9,12 @@ from app.core.config import settings
 from app.core.message_processor import message_processor
 
 from app.api.v1.router import api_router
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 app = FastAPI(
     title="Blume API",

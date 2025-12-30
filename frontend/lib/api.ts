@@ -2,6 +2,12 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+// Log the API base URL on module load (for debugging)
+if (typeof window !== 'undefined') {
+  console.log('🔵 API Client initialized with base URL:', API_BASE_URL);
+  console.log('🔵 NEXT_PUBLIC_API_URL env var:', process.env.NEXT_PUBLIC_API_URL || 'not set (using default)');
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -19,6 +25,14 @@ async function fetchApi(
 ): Promise<Response> {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  console.log("🔵 fetchApi called:", { 
+    url, 
+    endpoint,
+    apiBaseUrl: API_BASE_URL,
+    method: options.method, 
+    body: options.body 
+  });
+  
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
   };
@@ -27,15 +41,31 @@ async function fetchApi(
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
+    console.log("✅ Token found, adding to headers (length:", token.length, ")");
+  } else {
+    console.warn("⚠️ No token found in localStorage");
   }
 
-  const response = await fetch(url, {
+  console.log("Making fetch request to:", url, "with options:", {
+    method: options.method,
+    headers: defaultHeaders,
+    body: options.body
+  });
+  
+  let response: Response;
+  try {
+    response = await fetch(url, {
     ...options,
     headers: {
       ...defaultHeaders,
       ...options.headers,
     },
   });
+    console.log("Fetch response received:", { status: response.status, statusText: response.statusText, ok: response.ok });
+  } catch (fetchError) {
+    console.error("Fetch error:", fetchError);
+    throw fetchError;
+  }
 
   if (!response.ok) {
     // Handle 401 Unauthorized - redirect to login
@@ -48,8 +78,17 @@ async function fetchApi(
       }
     }
     
+    // Try to get error message from response body
+    let errorMessage = `API error: ${response.statusText}`;
+    try {
+      const errorData = await response.clone().json();
+      errorMessage = errorData.detail || errorData.message || errorMessage;
+    } catch {
+      // If response isn't JSON, use status text
+    }
+    
     throw new ApiError(
-      `API error: ${response.statusText}`,
+      errorMessage,
       response.status,
       response
     );
@@ -73,11 +112,15 @@ export const api = {
   },
 
   patch: async <T>(endpoint: string, data?: unknown): Promise<T> => {
+    console.log("API.patch called with:", { endpoint, data });
     const response = await fetchApi(endpoint, {
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
     });
-    return response.json();
+    console.log("API.patch response:", response);
+    const json = await response.json();
+    console.log("API.patch parsed JSON:", json);
+    return json;
   },
 
   delete: async <T>(endpoint: string): Promise<T> => {

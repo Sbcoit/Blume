@@ -10,7 +10,7 @@ from app.core.config import settings
 class GroqClient(BaseLLM):
     """Groq LLM client implementation"""
     
-    def __init__(self, model: str = "llama-3.1-70b-versatile"):
+    def __init__(self, model: str = "llama-3.3-70b-versatile"):
         self.client = Groq(api_key=settings.GROQ_API_KEY)
         self._model = model
     
@@ -27,6 +27,10 @@ class GroqClient(BaseLLM):
         functions: Optional[List[FunctionDefinition]] = None
     ) -> Union[str, Dict[str, Any]]:
         """Send a chat completion request"""
+        import logging
+        import asyncio
+        logger = logging.getLogger(__name__)
+        
         # Convert LLMMessage to Groq format
         groq_messages = []
         for msg in messages:
@@ -59,7 +63,20 @@ class GroqClient(BaseLLM):
             request_params["tools"] = tools
             request_params["tool_choice"] = "auto"
         
-        response = self.client.chat.completions.create(**request_params)
+        try:
+            # Run synchronous Groq API call in executor to avoid blocking
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.client.chat.completions.create(**request_params)
+            )
+        except Exception as e:
+            logger.error(f"Groq API error: {e}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Request params (sanitized): model={request_params.get('model')}, messages_count={len(request_params.get('messages', []))}")
+            if hasattr(e, 'response') and hasattr(e.response, 'text'):
+                logger.error(f"API response: {e.response.text}")
+            raise
         
         message = response.choices[0].message
         
