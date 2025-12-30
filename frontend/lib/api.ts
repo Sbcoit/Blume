@@ -38,6 +38,16 @@ async function fetchApi(
   });
 
   if (!response.ok) {
+    // Handle 401 Unauthorized - redirect to login
+    if (response.status === 401) {
+      // Clear invalid token
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        // Redirect to login page
+        window.location.href = '/login';
+      }
+    }
+    
     throw new ApiError(
       `API error: ${response.statusText}`,
       response.status,

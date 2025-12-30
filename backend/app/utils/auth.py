@@ -4,20 +4,36 @@ Authentication utilities
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from app.core.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import hashlib
+import base64
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    # Hash the plain password first with SHA-256, then verify against bcrypt hash
+    # Use digest() to get 32 bytes, then base64 encode to get a safe string (44 chars = 44 bytes)
+    password_hash_bytes = hashlib.sha256(plain_password.encode('utf-8')).digest()
+    password_hash_str = base64.b64encode(password_hash_bytes).decode('utf-8')
+    
+    # Use bcrypt directly to verify
+    try:
+        return bcrypt.checkpw(password_hash_str.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password"""
-    return pwd_context.hash(password)
+    """Hash a password - first with SHA-256, then bcrypt"""
+    # Hash with SHA-256 first to handle passwords longer than 72 bytes
+    # Use digest() to get 32 bytes, then base64 encode to get 44 characters (44 bytes)
+    password_hash_bytes = hashlib.sha256(password.encode('utf-8')).digest()
+    password_hash_str = base64.b64encode(password_hash_bytes).decode('utf-8')
+    
+    # Use bcrypt directly to hash (with salt automatically generated)
+    hashed = bcrypt.hashpw(password_hash_str.encode('utf-8'), bcrypt.gensalt())
+    return hashed.decode('utf-8')
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -40,4 +56,3 @@ def decode_token(token: str) -> Optional[dict]:
         return payload
     except JWTError:
         return None
-

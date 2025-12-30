@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { api } from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,19 +18,24 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const result = await signIn("credentials", {
+      const response = await api.post<{ access_token: string }>("/api/v1/auth/login", {
         email,
         password,
-        redirect: false,
       });
 
-      if (result?.error) {
-        setError("Invalid email or password");
-      } else {
+      if (response.access_token) {
+        // Store token in localStorage
+        localStorage.setItem("token", response.access_token);
+        // Redirect to dashboard
         router.push("/");
+        // Force a page reload to ensure auth state is updated
+        window.location.href = "/";
+      } else {
+        setError("Invalid email or password");
       }
-    } catch (err) {
-      setError("An error occurred. Please try again.");
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err.message || "Invalid email or password");
     } finally {
       setIsLoading(false);
     }

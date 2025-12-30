@@ -1,17 +1,30 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { PhoneModal } from "@/components/PhoneModal";
 import { api } from "@/lib/api";
 import DashboardLayout from "./(dashboard)/layout";
 
 export default function Home() {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
   const [agentName, setAgentName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // Check authentication first
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+    
+    setIsAuthenticated(true);
+    
     const fetchUserData = async () => {
       try {
         // Always show modal
@@ -25,7 +38,23 @@ export default function Home() {
     };
 
     fetchUserData();
-  }, []);
+  }, [router]);
+  
+  // Don't render if not authenticated
+  if (isAuthenticated === null || !isAuthenticated) {
+    return (
+      <div style={{ 
+        minHeight: "100vh", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center" 
+      }}>
+        <div className="body-base" style={{ color: "var(--text-secondary)" }}>
+          Loading...
+        </div>
+      </div>
+    );
+  }
 
   const handleSetNumber = async (phone: string, name?: string) => {
     try {

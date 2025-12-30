@@ -17,7 +17,7 @@ class IntegrationProvider(str, enum.Enum):
     GOOGLE_DOCS = "google_docs"
     NOTION = "notion"
     BLUEBUBBLES = "bluebubbles"
-    TWILIO = "twilio"
+    VAPI = "vapi"
 
 
 class Integration(Base, TimestampMixin):

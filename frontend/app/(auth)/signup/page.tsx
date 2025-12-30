@@ -45,22 +45,46 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="glass-modal max-w-md w-full">
-        <h1 className="heading-2 mb-2" style={{ color: "var(--text-primary)" }}>Create Your Account</h1>
-        <p className="body-base mb-8" style={{ color: "var(--text-secondary)" }}>
-          Sign up to get started with Blume
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "var(--space-lg)"
+    }}>
+      <div className="glass-modal" style={{ maxWidth: "28rem", width: "100%" }}>
+        <h1 className="heading-2" style={{ color: "var(--text-primary)", marginBottom: "0.5rem" }}>
+          Welcome to Blume
+        </h1>
+        <p className="body-base" style={{ color: "var(--text-secondary)", marginBottom: "2rem" }}>
+          Create your account
         </p>
 
         {error && (
-          <div className="mb-4 p-4 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400">
+          <div style={{
+            marginBottom: "1.5rem",
+            padding: "1rem",
+            borderRadius: "var(--radius-md)",
+            backgroundColor: "rgba(239, 68, 68, 0.15)",
+            border: "1px solid rgba(239, 68, 68, 0.3)",
+            color: "#EF4444"
+          }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
           <div>
-            <label htmlFor="email" className="block body-small mb-2" style={{ color: "var(--text-secondary)" }}>
+            <label
+              htmlFor="email"
+              className="body-small"
+              style={{
+                color: "var(--text-secondary)",
+                marginBottom: "0.75rem",
+                display: "block",
+                fontWeight: 500
+              }}
+            >
               Email
             </label>
             <input
@@ -69,13 +93,22 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full"
+              style={{ width: "100%" }}
               disabled={isLoading}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block body-small mb-2" style={{ color: "var(--text-secondary)" }}>
+            <label
+              htmlFor="password"
+              className="body-small"
+              style={{
+                color: "var(--text-secondary)",
+                marginBottom: "0.75rem",
+                display: "block",
+                fontWeight: 500
+              }}
+            >
               Password
             </label>
             <input
@@ -85,13 +118,22 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full"
+              style={{ width: "100%" }}
               disabled={isLoading}
             />
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block body-small mb-2" style={{ color: "var(--text-secondary)" }}>
+            <label
+              htmlFor="confirmPassword"
+              className="body-small"
+              style={{
+                color: "var(--text-secondary)",
+                marginBottom: "0.75rem",
+                display: "block",
+                fontWeight: 500
+              }}
+            >
               Confirm Password
             </label>
             <input
@@ -101,24 +143,38 @@ export default function SignupPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full"
+              style={{ width: "100%" }}
               disabled={isLoading}
             />
           </div>
 
           <button
             type="submit"
-            className="glass-button-primary w-full"
+            className="glass-button-primary"
+            style={{ width: "100%" }}
             disabled={isLoading}
           >
             {isLoading ? "Creating account..." : "Sign Up"}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
           <p className="body-small" style={{ color: "var(--text-secondary)" }}>
             Already have an account?{" "}
-            <Link href="/login" style={{ color: "var(--accent-blue)" }} className="hover:underline">
+            <Link
+              href="/login"
+              style={{
+                color: "var(--accent-blue)",
+                textDecoration: "none",
+                transition: "opacity var(--transition-fast)"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = "0.8";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "1";
+              }}
+            >
               Sign in
             </Link>
           </p>

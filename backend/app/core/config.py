@@ -24,10 +24,9 @@ class Settings(BaseSettings):
     BLUEBUBBLES_SERVER_URL: str = "http://localhost:1234"
     BLUEBUBBLES_SERVER_PASSWORD: str
     
-    # Twilio
-    TWILIO_ACCOUNT_SID: str = ""
-    TWILIO_AUTH_TOKEN: str = ""
-    TWILIO_PHONE_NUMBER: str = ""
+    # Vapi
+    VAPI_API_KEY: str = ""
+    VAPI_BASE_URL: str = "https://api.vapi.ai"
     
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""

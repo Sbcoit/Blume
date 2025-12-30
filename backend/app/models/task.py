@@ -36,7 +36,7 @@ class Task(Base, TimestampMixin):
     input = Column(Text, nullable=False)  # What user requested
     output = Column(Text, nullable=True)  # What agent did
     status = Column(SQLEnum(TaskStatus), nullable=False, default=TaskStatus.PENDING)
-    metadata = Column(JSONB, nullable=True)  # Execution details, timestamps, etc.
+    tast_metadata = Column(JSONB, nullable=True)  # Execution details, timestamps, etc.
     
     # Relationship
     user = relationship("User", backref="tasks")

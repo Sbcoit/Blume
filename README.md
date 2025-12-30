@@ -8,7 +8,7 @@ A personal secretary agent platform accessible via iMessage (with blue bubbles),
 - **Backend**: FastAPI (Python) with async support
 - **AI/LLM**: Groq API
 - **iMessage Integration**: BlueBubbles Server (runs on Mac Mini)
-- **Calls**: Twilio (for voice calls)
+- **Calls**: Vapi (for voice calls)
 - **Database**: PostgreSQL with SQLAlchemy ORM
 
 ## Setup Instructions

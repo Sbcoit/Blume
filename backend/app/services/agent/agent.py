@@ -7,17 +7,35 @@ from app.services.agent.handlers.scheduling_handler import SchedulingHandler
 from app.services.agent.handlers.research_handler import ResearchHandler
 from app.services.agent.handlers.document_handler import DocumentHandler
 from app.services.agent.handlers.workflow_handler import WorkflowHandler
+from app.services.agent.handlers.communication_handler import CommunicationHandler
 from app.services.agent.llm.base import BaseLLM
 from app.services.agent.llm.groq_client import GroqClient
 from app.core.events import event_bus, EventType
+from app.integrations.messaging.bluebubbles.service import BlueBubblesService
+from app.integrations.voice.vapi.service import VapiService
 
 
 class AgentService:
     """Main agent orchestrator"""
     
-    def __init__(self, llm: Optional[BaseLLM] = None):
+    def __init__(
+        self,
+        llm: Optional[BaseLLM] = None,
+        bluebubbles_service: Optional[BlueBubblesService] = None,
+        vapi_service: Optional[VapiService] = None
+    ):
         self.llm = llm or GroqClient()
+        self.bluebubbles = bluebubbles_service or BlueBubblesService()
+        self.vapi = vapi_service or VapiService()
+        
+        # Initialize communication handler with services
+        communication_handler = CommunicationHandler(
+            bluebubbles_service=self.bluebubbles,
+            vapi_service=self.vapi
+        )
+        
         self._handlers: List[BaseHandler] = [
+            communication_handler,  # Add communication handler first for priority
             SchedulingHandler(),
             ResearchHandler(),
             DocumentHandler(),

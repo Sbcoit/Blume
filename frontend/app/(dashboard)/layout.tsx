@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, ListTodo, Settings, LogOut } from "lucide-react";
@@ -12,6 +12,42 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    
+    if (!token) {
+      // No token, redirect to login
+      router.push("/login");
+      return;
+    }
+    
+    // Token exists, user is authenticated
+    setIsAuthenticated(true);
+  }, [router]);
+
+  // Show loading state while checking authentication
+  if (isAuthenticated === null) {
+    return (
+      <div style={{ 
+        minHeight: "100vh", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center" 
+      }}>
+        <div className="body-base" style={{ color: "var(--text-secondary)" }}>
+          Loading...
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (redirect will happen)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const handleLogout = () => {
     // Clear token from localStorage
